@@ -1,6 +1,6 @@
 const path = require('path');
 
 module.exports = {
-  httpPort: 3333,
+  httpPort: 8080,
   staticFolder: path.join(__dirname + '/../../../client')
 };
