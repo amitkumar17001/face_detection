@@ -15,6 +15,6 @@
 
 * Make sure you are still in the `server` directory
 * To run the server: `node server.js`
-* To run the demo locally, open a browser and go to `localhost:8080`
+* To run the demo locally, open a browser and go to `localhost:3333`
 
 The app should be up and running!
