@@ -5,9 +5,11 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "axios": "^0.18.0",
     "express": "4.10.1",
     "morgan": "1.4.1",
     "opencv": "git+https://github.com/peterbraden/node-opencv.git",
+    "opencv4nodejs": "^4.2.1",
     "socket.io": "1.2.1"
   }
 }

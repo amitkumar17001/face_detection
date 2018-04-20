@@ -1,35 +1,76 @@
-var cv = require('opencv');
+const cv = require('opencv4nodejs');
+const axios = require('axios');
 
-// camera properties
-var camWidth = 320;
-var camHeight = 240;
-var camFps = 10;
-var camInterval = 1000 / camFps;
+const instance = axios.create({
+    baseURL: `http://18.233.162.100/api/`,
+    timeout: 5000
+});
+const drawRect = (image, rect, color, opts = { thickness: 2 }) =>
+    image.drawRectangle(
+        rect,
+        color,
+        opts.thickness,
+        cv.LINE_8
+    );
 
-// face detection properties
-var rectColor = [0, 255, 0];
-var rectThickness = 2;
+const drawBlueRect = (image, rect, opts = { thickness: 2 }) =>
+    drawRect(image, rect, new cv.Vec(255, 0, 0), opts);
 
-// initialize camera
-var camera = new cv.VideoCapture(0);
-camera.setWidth(camWidth);
-camera.setHeight(camHeight);
+const grabFrames = (videoFile, delay, onFrame) => {
+    const cap = new cv.VideoCapture(videoFile);
+    let done = false;
+    const intvl = setInterval(() => {
+        let frame = cap.read();
+        // loop back to start on end of stream reached
+        if (frame.empty) {
+            cap.reset();
+            frame = cap.read();
+        }
+        onFrame(frame);
+
+        const key = cv.waitKey(delay);
+        done = key !== -1 && key !== 255;
+        if (done) {
+            clearInterval(intvl);
+            console.log('Key pressed, exiting.');
+        }
+    }, 0);
+};
+
+const runVideoFaceDetection = (src, detectFaces) => grabFrames(src, 1, async (frame) => {
+    console.time('detection time');
+    const frameResized = frame.resizeToMax(800);
+
+    // detect faces
+    const faceRects = detectFaces(frameResized);
+    if (faceRects.length) {
+        // draw detection
+        faceRects.forEach(faceRect => drawBlueRect(frameResized, faceRect));
+        cv.imshow('face detection', frameResized);
+        console.log('faceDetected>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>');
+        const event = 'face_detected';
+        await instance.get('/webcam', { event });
+
+    }
+    cv.imshow('face detection', frameResized);
+    console.timeEnd('detection time');
+});
 
 module.exports = function (socket) {
-  setInterval(function() {
-    camera.read(function(err, im) {
-      if (err) throw err;
+    const classifier = new cv.CascadeClassifier(cv.HAAR_FRONTALFACE_ALT2);
 
-      im.detectObject('./node_modules/opencv/data/haarcascade_frontalface_alt2.xml', {}, function(err, faces) {
-        if (err) throw err;
+    const webcamPort = 0;
 
-        for (var i = 0; i < faces.length; i++) {
-          face = faces[i];
-          im.rectangle([face.x, face.y], [face.width, face.height], rectColor, rectThickness);
-        }
-
-        socket.emit('frame', { buffer: im.toBuffer() });
-      });
-    });
-  }, camInterval);
+    function detectFaces(img) {
+        // restrict minSize and scaleFactor for faster processing
+        const options = {
+            minSize: new cv.Size(100, 100),
+            scaleFactor: 1.2,
+            minNeighbors: 10
+        };
+        return classifier.detectMultiScale(img.bgrToGray(), options).objects;
+    }
+    console.log('emitting data');
+    const faceDetected = runVideoFaceDetection(webcamPort, detectFaces);
+    socket.emit('face_detected', { data: faceDetected});
 };

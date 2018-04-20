@@ -1,9 +1,3 @@
-# face-detection-node-opencv
-
-Real-time face detection using OpenCV, Node.js, and WebSockets.
-
-Click [here](http://youtu.be/v2SY0naPBFw) to see it in action.
-
 ## Requirements
 
 * [Node.js](http://nodejs.org/)
